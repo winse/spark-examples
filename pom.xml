@@ -15,11 +15,13 @@
 
         <spark.version>1.6.0</spark.version>
         <hadoop.version>2.6.3</hadoop.version>
+        <slf4j.version>1.7.12</slf4j.version>
 
         <scala.version>2.10.5</scala.version>
         <scala.compat.version>2.10</scala.compat.version>
 
         <btrace.version>1.2.3</btrace.version>
+        <metrics.version>3.1.0</metrics.version>
     </properties>
 
     <dependencies>
@@ -34,6 +36,12 @@
             <artifactId>btrace-agent</artifactId>
             <version>${btrace.version}</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>${metrics.version}</version>
         </dependency>
 
         <dependency>
@@ -68,6 +76,22 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <version>${slf4j.version}</version>
         </dependency>
 
         <!--

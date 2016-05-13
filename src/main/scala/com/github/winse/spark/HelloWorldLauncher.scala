@@ -16,7 +16,7 @@ trait SparkLauncherCreator {
     //
     // package:
     //   E:\git\spark\assembly>mvn package
-    val launcher = new SparkLauncher(Map("SPARK_TESTING" -> "1", "SPARK_USER" -> "spark"))
+    val launcher = new SparkLauncher(Map("SPARK_TESTING" -> "1"))
 
     launcher
       // 用于查找运行脚本位置
@@ -27,7 +27,6 @@ trait SparkLauncherCreator {
       // or use env SPARK_DIST_CLASSPATH instead.
       .setConf("spark.driver.extraClassPath", "target/classes")
       .setConf("spark.driver.extraJavaOptions", """-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005""")
-      .setConf("java.net.preferIPv4Stack", "true")
       // @see org.apache.spark.launcher.SparkSubmitCommandBuilder.specialClasses
       .setAppResource("spark-internal")
 
@@ -51,31 +50,44 @@ object HelloWorldLauncher extends SparkLauncherCreator {
 }
 
 
+/**
+  * startApplication 比 launch 高级了很多(有服务端的支持)。
+  *
+  * 在 launch 提交任务的基础上，启动 LauncherServer 通过socket与Driver建立连接获取程序的状态
+  * (具体以后看到spark-core再研究)，同时通知注册的listener。
+  */
 object HelloWorldLauncherWithServer extends SparkLauncherCreator with Logging {
+  val lock = new Lock
+  lock.available = false
 
-  def main(args: Array[String]) {
-    val lock = new Lock
-    lock.available = false
+  object Status extends SparkAppHandle.Listener {
 
-    object Status extends SparkAppHandle.Listener {
-
-      override def infoChanged(handle: SparkAppHandle): Unit = {
-        logInfo(handle.toString)
-      }
-
-      override def stateChanged(handle: SparkAppHandle): Unit = {
-        logInfo(handle.toString)
-
-        if (handle.getState.isFinal) {
-          lock.release()
-        }
-      }
-
+    private def info(handle: SparkAppHandle): Unit = {
+      logInfo(s"${handle.getAppId} : ${handle.getState}")
     }
 
+    override def infoChanged(handle: SparkAppHandle): Unit = {
+      info(handle)
+    }
+
+    override def stateChanged(handle: SparkAppHandle): Unit = {
+      info(handle)
+
+      if (handle.getState.isFinal) {
+        lock.release()
+      }
+    }
+
+  }
+
+  def main(args: Array[String]) {
+    // 与Driver端 org.apache.spark.launcher.LauncherBackend 有交互
+    // + yarn.Client.$
+    // + scheduler.cluster.SparkDeploySchedulerBackend
+    // + scheduler.local.LocalBackend
     val handle = create().startApplication(Status)
 
-    logInfo(s"${handle.getAppId}: ${handle.getState}")
+    logInfo("start application and now running...")
 
     lock.acquire()
   }
