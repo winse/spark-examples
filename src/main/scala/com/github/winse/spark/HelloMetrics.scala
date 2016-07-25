@@ -6,7 +6,24 @@ import javax.management.ObjectName
 
 import scala.beans.BeanProperty
 
-object HelloMetrics extends App {
+trait Tools {
+
+  def openMBean() {
+
+    // open MBeans tool, then click app ` com.intellij.rt.execution.application.AppMain `
+    def openTool: Unit = {
+      import scala.sys.process._
+      """cmd  /S /C start /MAX %JAVA_HOME%/bin/jvisualvm.exe || exit """.!
+    }
+
+    val tool = new Thread(openTool)
+    tool.setDaemon(false)
+    tool.start()
+  }
+
+}
+
+object HelloMetrics extends App with Tools {
 
   import com.codahale.metrics.MetricRegistry._
   import com.codahale.metrics._
@@ -28,16 +45,13 @@ object HelloMetrics extends App {
       .build()
     reporter.start()
 
-    // open MBeans tool, then click app ` com.intellij.rt.execution.application.AppMain `
-    import scala.sys.process._
-    "cmd /C %JAVA_HOME%/bin/jvisualvm.exe ".!
+    // open jvisualvm
+    openMBean()
 
     for (i <- 0 to 60) {
       Thread.sleep(1000)
       sleep.inc()
     }
-
-    println("jmx change property success, exit.")
 
   }
 
@@ -56,7 +70,7 @@ object HelloMetrics extends App {
 
 }
 
-object RWMetric extends App {
+object RWMetric extends App with Tools {
 
   trait StatMBean {
     def getReady: Boolean
@@ -72,19 +86,13 @@ object RWMetric extends App {
     @BeanProperty var sleepTimes: Int = 0
   }
 
-  def openTool: Unit = {
-    import scala.sys.process._
-    """cmd  /S /C start /MAX %JAVA_HOME%/bin/jvisualvm.exe || exit """.!
-  }
-
   val mBeanServer = ManagementFactory.getPlatformMBeanServer
   val name = new ObjectName("com.github.winse:name=Stat")
   val stat = new Stat
   mBeanServer.registerMBean(stat, name)
 
-  val tool = new Thread(openTool)
-  tool.setDaemon(false)
-  tool.start()
+  // open jvisaulvm
+  openMBean()
 
   while (!stat.ready) {
     Thread.sleep(1000)

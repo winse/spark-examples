@@ -20,11 +20,25 @@
         <scala.version>2.10.5</scala.version>
         <scala.compat.version>2.10</scala.compat.version>
 
+        <joda.version>2.9.3</joda.version>
+
         <btrace.version>1.2.3</btrace.version>
         <metrics.version>3.1.0</metrics.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.htrace</groupId>
+            <artifactId>htrace-core4</artifactId>
+            <version>4.1.0-incubating</version>
+        </dependency>
+
+<dependency>
+    <groupId>org.tachyonproject</groupId>
+    <artifactId>tachyon-common</artifactId>
+    <version>0.8.2</version>
+</dependency>
+
         <dependency>
             <groupId>com.sun.tools.btrace</groupId>
             <artifactId>btrace-client</artifactId>
@@ -42,6 +56,12 @@
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <version>${metrics.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>${joda.version}</version>
         </dependency>
 
         <dependency>

@@ -11,8 +11,9 @@ trait SparkLauncherCreator {
 
   def create(): SparkLauncher = {
 
-    // 加参数也没用，windows 下面一定要 spark-assembly*hadoop*.jar
-    // 就算修改脚本绕过去了，还是没有 scala-library.jar
+    // 通过launcher启动必须编译!!
+    // 加参数也没用，SPARK_HOME 下面一定要 spark-assembly*hadoop*.jar
+    // 就算修改脚本绕过去了，还是会缺少 scala-library.jar
     //
     // package:
     //   E:\git\spark\assembly>mvn package
@@ -42,6 +43,7 @@ object HelloWorldLauncher extends SparkLauncherCreator {
   def main(args: Array[String]) {
     val p = create().launch()
 
+    // 由于cmd编码是GBK的，在console窗口打印的中文会乱码!!
     new Thread(Try(p.getInputStream)(IOUtils.copyBytes(_, System.out, 4096))).start()
     new Thread(Try(p.getErrorStream)(IOUtils.copyBytes(_, System.err, 4096))).start()
 
