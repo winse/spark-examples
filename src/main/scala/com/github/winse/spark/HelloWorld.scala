@@ -25,8 +25,8 @@ object HelloWorldStandalone {
   Logger.getLogger("org.apache.spark.scheduler").setLevel(Level.DEBUG);
   Logger.getLogger("org.apache.spark.SparkContext").setLevel(Level.DEBUG);
 
-//  import scala.sys.process._
-//  "cmd /C mvn clean package -DskipTests".!
+  //  import scala.sys.process._
+  //  "cmd /C mvn clean package -DskipTests".!
 
   val config = sparkConf()
     .setMaster("spark://localhost:7077")

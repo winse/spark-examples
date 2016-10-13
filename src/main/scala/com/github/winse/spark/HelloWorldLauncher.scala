@@ -1,7 +1,6 @@
 package com.github.winse.spark
 
 import org.apache.hadoop.io.IOUtils
-import org.apache.spark.Logging
 import org.apache.spark.launcher.{SparkAppHandle, SparkLauncher}
 
 import scala.collection.JavaConversions._
@@ -9,15 +8,15 @@ import scala.concurrent.Lock
 
 trait SparkLauncherCreator {
 
-  def create(): SparkLauncher = {
+  def createSparkLauncher(withMaven: Boolean = false): SparkLauncher = {
 
     // 通过launcher启动必须编译!!
     // 加参数也没用，SPARK_HOME 下面一定要 spark-assembly*hadoop*.jar
     // 就算修改脚本绕过去了，还是会缺少 scala-library.jar
     //
-    // package:
+    // first package to create spark-assembly jar（assembly\target\scala-2.11\jars）. :
     //   E:\git\spark\assembly>mvn package
-    val launcher = new SparkLauncher(Map("SPARK_TESTING" -> "1"))
+    val launcher = new SparkLauncher(if (withMaven) Map[String, String]() else Map("SPARK_TESTING" -> "1"))
 
     launcher
       // 用于查找运行脚本位置
@@ -27,10 +26,17 @@ trait SparkLauncherCreator {
       .setMaster("local[2]")
       // or use env SPARK_DIST_CLASSPATH instead.
       .setConf("spark.driver.extraClassPath", "target/classes")
-      .setConf("spark.driver.extraJavaOptions", """-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005""")
+      .setConf("spark.driver.extraJavaOptions", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
       // @see org.apache.spark.launcher.SparkSubmitCommandBuilder.specialClasses
       .setAppResource("spark-internal")
 
+    if (withMaven){
+      launcher.addSparkArg("--packages", "joda-time:joda-time:2.9.1")
+      // 本地maven-repo的路径改了。如果在$USER/.m2/repostories下面的话，可以不用配置该属性并且还不用下载
+      launcher.addSparkArg("--repositories", "file:///D:/maven/.m2/repository")
+    }
+
+    launcher
   }
 
 }
@@ -41,9 +47,16 @@ trait SparkLauncherCreator {
 object HelloWorldLauncher extends SparkLauncherCreator {
 
   def main(args: Array[String]) {
-    val p = create().launch()
+    val p = createSparkLauncher(true).launch()
 
-    // 由于cmd编码是GBK的，在console窗口打印的中文会乱码!!
+    // * 脚本不能正常运行
+    //     在 spark-submit.cmd 添加输出重定向（这里submit2.cmd去掉双引号吧）:
+    //
+    //     cmd /V /E /C %~dp0spark-submit2.cmd %* >stdout 2>stderr
+
+    // * 脚本正常工作， *Process IO重定向* 才有作用，否则脚本早就报错结束了
+    //
+    // 注意：由于cmd编码是GBK的，在 IDEA console 窗口打印的中文会乱码!!
     new Thread(Try(p.getInputStream)(IOUtils.copyBytes(_, System.out, 4096))).start()
     new Thread(Try(p.getErrorStream)(IOUtils.copyBytes(_, System.err, 4096))).start()
 
@@ -55,14 +68,14 @@ object HelloWorldLauncher extends SparkLauncherCreator {
 /**
   * startApplication 比 launch 高级了很多(有服务端的支持)。
   *
-  * 在 launch 提交任务的基础上，启动 LauncherServer 通过socket与Driver建立连接获取程序的状态
+  * 在 launch 提交任务的基础上，启动 LauncherServer 通过socket与Driver建立连接，获取程序的状态
   * (具体以后看到spark-core再研究)，同时通知注册的listener。
   */
-object HelloWorldLauncherWithServer extends SparkLauncherCreator with Logging {
-  val lock = new Lock
-  lock.available = false
+object HelloWorldLauncherWithServer extends SparkLauncherCreator {
+  val isFinishedLock = new Lock
+  isFinishedLock.available = false
 
-  object Status extends SparkAppHandle.Listener {
+  object HelloWorldStatus extends SparkAppHandle.Listener {
 
     private def info(handle: SparkAppHandle): Unit = {
       logInfo(s"${handle.getAppId} : ${handle.getState}")
@@ -76,7 +89,7 @@ object HelloWorldLauncherWithServer extends SparkLauncherCreator with Logging {
       info(handle)
 
       if (handle.getState.isFinal) {
-        lock.release()
+        isFinishedLock.release()
       }
     }
 
@@ -87,11 +100,11 @@ object HelloWorldLauncherWithServer extends SparkLauncherCreator with Logging {
     // + yarn.Client.$
     // + scheduler.cluster.SparkDeploySchedulerBackend
     // + scheduler.local.LocalBackend
-    val handle = create().startApplication(Status)
+    val handle = createSparkLauncher().startApplication(HelloWorldStatus)
 
     logInfo("start application and now running...")
 
-    lock.acquire()
+    isFinishedLock.acquire()
   }
 
 }

@@ -1,11 +1,16 @@
 package com.github.winse
 
-import com.typesafe.config.ConfigFactory
-import org.apache.spark.{Logging, SparkConf}
+import org.apache.spark.SparkConf
+import org.slf4j.LoggerFactory
 
-import scala.collection.JavaConversions._
+package object spark {
 
-package object spark extends Logging {
+  private val LOG = LoggerFactory.getLogger(getClass)
+
+  def logInfo(f: => String) {
+    if (LOG.isInfoEnabled)
+      LOG.info(f)
+  }
 
   implicit def funToRunnable(f: => Unit) = new Runnable() {
     def run() = f
